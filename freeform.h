@@ -18,7 +18,7 @@ public:
     virtual char getType()=0;
     virtual Freeform * clone() const = 0;
 
-    void drawControlPoints(){
+    virtual void drawControlPoints(){
         // draw points at control points
         glBegin(GL_POINTS);
         for (int i = 0; i < controlPoints.size(); i++) {
@@ -42,6 +42,12 @@ public:
 
     int getCPSize() {
         return controlPoints.size();
+    }
+
+    void printCP() {
+        for (int i = 0; i < controlPoints.size(); i++) {
+            controlPoints[i].print();
+        }
     }
 
 };

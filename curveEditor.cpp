@@ -26,6 +26,9 @@
 #include "beziercurve.h"
 #include "lagrangecurve.h"
 #include "polyline.h"
+#include "catmullrom.h"
+#include "hermite.h"
+// #include "catmullclark.h"
 
 // g++ curveEditor.cpp -framework OpenGL -framework GLUT && ./a.out
 
@@ -34,6 +37,8 @@ float trackPosition = 0;
 bool polyline = false;
 bool lagrng = false;
 bool bezier = false;
+bool rom = false;
+bool hermite = false;
 bool adding = false;
 bool deleting = false;
 int selected;
@@ -41,7 +46,6 @@ int cpMoving; // must be used in conjunction with dragging
 
 BezierCurve bc;
 LagrangeCurve lc;
-bool curveBool = false;
 bool dragging = false;
 bool originalBool = false;
 bool dragCurve = false;
@@ -49,26 +53,35 @@ bool dragCurve = false;
 
 void onKeyboardDown(unsigned char key, int x, int y) {
     if (key == 'p') { // polyline
-        polyline = true;
-        if (!curveBool) {
+        if (!polyline) {
             curves.push_back(new Polyline());
-            curveBool = true;
             selected = curves.size() - 1;
         }
+        polyline = true;
     } else if (key == 'l') { // lagrange
-        lagrng = true;
-        if (!curveBool) {
+        if (!lagrng) {
             curves.push_back(new LagrangeCurve());
-            curveBool = true;
             selected = curves.size() - 1;
         }
+        lagrng = true;
     } else if (key == 'b') { // bezier
-        bezier = true;
-        if (!curveBool) {
+        if (!bezier) {
             curves.push_back(new BezierCurve());
-            curveBool = true;
             selected = curves.size() - 1;
         }
+        bezier = true;
+    } else if (key == 'r') { // bezier
+        if (!rom) {
+            curves.push_back(new CatmullRomCurve());
+            selected = curves.size() - 1;
+        }
+        rom = true;
+    } else if (key == 'u') { // bezier
+        if (!hermite) {
+            curves.push_back(new HermiteCurve());
+            selected = curves.size() - 1;
+        }
+        hermite = true;
     } else if (key == 'a') { // add control points
         adding = true;
     } else if (key == 'd') { // delete control points
@@ -86,19 +99,26 @@ void onKeyboardUp(unsigned char key, int x, int y) {
         if (curves.at(curves.size() - 1)->getCPSize() < 2) {
             curves.pop_back();
         }
-        curveBool = false;
     } else if (key == 'l') {
         lagrng = false;
         if (curves.at(curves.size() - 1)->getCPSize() < 2) {
             curves.pop_back();
         }
-        curveBool = false;
     } else if (key == 'b') {
         bezier = false;
         if (curves.at(curves.size() - 1)->getCPSize() < 2) {
             curves.pop_back();
         }
-        curveBool = false;
+    } else if (key == 'r') {
+        rom = false;
+        if (curves.at(curves.size() - 1)->getCPSize() < 4) {
+            curves.pop_back();
+        }
+    } else if (key == 'u') {
+        hermite = false;
+        if (curves.at(curves.size() - 1)->getCPSize() < 2) {
+            curves.pop_back();
+        }
     } else if (key == 'a') {
         adding = false;
     } else if (key == 'd') {
@@ -132,7 +152,7 @@ float2 onControlPoint(float x, float y) {  // need to convert the controlpoint t
         }
         for (int j = 0; j < obj->getCPSize(); j++) {
             float2 f = obj->getControlPoint(j);
-            if (fabsf(f.x - mouseX) <= offsetX && fabsf(f.y - mouseY) <= offsetY) {
+            if (fabsf(f.x - x) <= offsetX && fabsf(f.y - y) <= offsetY) {
                 dragging = true;
                 return float2(i, j);
             }
@@ -142,8 +162,12 @@ float2 onControlPoint(float x, float y) {  // need to convert the controlpoint t
     return float2(-1, -1);
 }
 
+float2 onTangentPoint(float x, float y) {
+    
+}
+
 // check if the click is on a curve
-int onCurve() {
+int onCurve(float x, float y) {
     float xPix = 4.0/glutGet(GLUT_WINDOW_WIDTH);
     float yPix = 4.0/glutGet(GLUT_WINDOW_HEIGHT);
     for (int i = 0; i < curves.size(); i++) {
@@ -154,14 +178,14 @@ int onCurve() {
                 float2 cpB = obj->getControlPoint(j + 1);
                 bool condition;
                 if (cpA.x != cpB.x) {
-                    condition = ((cpA.x <= mouseX && mouseX <= cpB.x) 
-                        || (cpB.x <= mouseX && mouseX <= cpA.x));
+                    condition = ((cpA.x <= x && x <= cpB.x) 
+                        || (cpB.x <= x && x <= cpA.x));
                 } else {
-                    condition = ((cpA.y <= mouseY && mouseY <= cpB.y) 
-                        || (cpB.y <= mouseY && mouseY <= cpA.y));
+                    condition = ((cpA.y <= y && y <= cpB.y) 
+                        || (cpB.y <= y && y <= cpA.y));
                 }
-                float crossProduct = fabsf((cpB.x - cpA.x) * (mouseY - cpA.y) 
-                    - (mouseX - cpA.x) * (cpB.y - cpA.y));
+                float crossProduct = fabsf((cpB.x - cpA.x) * (y - cpA.y) 
+                    - (x - cpA.x) * (cpB.y - cpA.y));
                 if ((crossProduct <= xPix || crossProduct <= yPix)  && condition) {
                     dragCurve = true;
                     return i;
@@ -170,7 +194,7 @@ int onCurve() {
         } else {
             for (float t = 0; t < 1; t += 0.0001) {
                 float2 p = obj->getPoint(t);
-                if (fabsf(p.x - mouseX) <= xPix && fabsf(p.y - mouseY) <= yPix) {
+                if (fabsf(p.x - x) <= xPix && fabsf(p.y - y) <= yPix) {
                     dragCurve = true;
                     return i;
                 }
@@ -192,31 +216,32 @@ void onMouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         mouseX = x * 2.0 / viewportRect[2] - 1.0;
         mouseY = -y * 2.0 / viewportRect[3] + 1.0;
-        if (polyline || lagrng || bezier) {
+        if (polyline || lagrng || bezier || rom || hermite) {
             curves.at(curves.size() - 1)->addControlPoint(float2(mouseX, mouseY));
+            if (hermite) {
+                curves.at(curves.size() - 1)->printCP();
+            }
         } else if (adding) {
             if (selected >= 0) {
                 curves.at(selected)->addControlPoint(float2(mouseX, mouseY));
             }
         } else {
             float2 vals = onControlPoint(mouseX, mouseY);
-            int curveIndex = onCurve();
+            int curveIndex = onCurve(mouseX, mouseY);
             if (vals.x < 0) {
                 // will be -1 if not on curve as well. otherwise will have index
                 selected = curveIndex;
             } else {
                 selected = vals.x;
                 cpMoving = vals.y;
-                if (deleting) {
-                    if (selected >= 0) {
-                        curves.at(selected)->deleteControlPoint(cpMoving);
-                        if (cpMoving == curves.at(selected)->getCPSize()) {
-                            cpMoving--;
-                        }
-                        if (curves.at(selected)->getCPSize() < 1) {
-                            deleteCurve(selected);
-                            selected = -1;
-                        }
+                if (deleting && selected >= 0) {
+                    curves.at(selected)->deleteControlPoint(cpMoving);
+                    if (cpMoving == curves.at(selected)->getCPSize()) {
+                        cpMoving--;
+                    }
+                    if (curves.at(selected)->getCPSize() < 1) {
+                        deleteCurve(selected);
+                        selected = -1;
                     }
                 }
             }
@@ -278,6 +303,12 @@ void onDisplay( ) {
         } else if (type == 'p') {
             glColor3d(1.0, 0.0, 0.0);
             glPointSize(10);
+        } else if (type == 'c') {
+            glColor3d(1.0, 0.0, 1.0);
+            glPointSize(10);
+        } else if (type == 'u') {
+            glColor3d(1.0, 0.5, 0.5);
+            glPointSize(10);
         }
 
         curves.at(i)->drawControlPoints();
@@ -304,6 +335,10 @@ int main(int argc, char * argv[]) {
     glutDisplayFunc(onDisplay);
     glutMotionFunc(onMotion);
 
+    // curves.push_back(new CatmullClarkCurve());
+    // for (int i = 0; i < 4; i++) {
+    //     curves.at(0)->addControlPoint(float2().random());
+    // }
 
     glutMainLoop();                             // Event loop
     

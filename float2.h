@@ -32,9 +32,13 @@ public:
         return float2(x - b.x, y - b.x);
     }
     
-    float operator*(float2 b) const {
-        return (x * b.x) - (y * b.y);
+    float2 operator* (float2 b) const {
+        return float2(x * b.x, y * b.x);
     }
+
+    // float operator*(float2 b) const {
+    //     return (x * b.x) - (y * b.y);
+    // }
     
     float2 operator*(int b) const {
         return float2((x * b),(y * b));

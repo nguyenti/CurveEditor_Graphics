@@ -16,7 +16,7 @@ class BezierCurve: public Freeform
             return 0;
         }
         if(i < 0 || i > n) return 0;
-        return (1-t) *bernstein(i, n-1, t) + t * bernstein(i-1, n-1, t);
+        return (1-t) * bernstein(i, n-1, t) + t * bernstein(i-1, n-1, t);
     }
 
     static double bernsteinDerivative(int i, int n, double t) {
