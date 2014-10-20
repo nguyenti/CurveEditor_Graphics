@@ -27,8 +27,7 @@
 #include "lagrangecurve.h"
 #include "polyline.h"
 #include "catmullrom.h"
-#include "hermite.h"
-// #include "catmullclark.h"
+#include "bezierdigit.h"
 
 // g++ curveEditor.cpp -framework OpenGL -framework GLUT && ./a.out
 
@@ -43,9 +42,8 @@ bool adding = false;
 bool deleting = false;
 int selected;
 int cpMoving; // must be used in conjunction with dragging
+BezierDigit curveCounter[2];
 
-BezierCurve bc;
-LagrangeCurve lc;
 bool dragging = false;
 bool originalBool = false;
 bool dragCurve = false;
@@ -76,12 +74,6 @@ void onKeyboardDown(unsigned char key, int x, int y) {
             selected = curves.size() - 1;
         }
         rom = true;
-    } else if (key == 'u') { // bezier
-        if (!hermite) {
-            curves.push_back(new HermiteCurve());
-            selected = curves.size() - 1;
-        }
-        hermite = true;
     } else if (key == 'a') { // add control points
         adding = true;
     } else if (key == 'd') { // delete control points
@@ -111,11 +103,6 @@ void onKeyboardUp(unsigned char key, int x, int y) {
         }
     } else if (key == 'r') {
         rom = false;
-        if (curves.at(curves.size() - 1)->getCPSize() < 4) {
-            curves.pop_back();
-        }
-    } else if (key == 'u') {
-        hermite = false;
         if (curves.at(curves.size() - 1)->getCPSize() < 2) {
             curves.pop_back();
         }
@@ -163,7 +150,7 @@ float2 onControlPoint(float x, float y) {  // need to convert the controlpoint t
 }
 
 float2 onTangentPoint(float x, float y) {
-    
+
 }
 
 // check if the click is on a curve
@@ -218,9 +205,6 @@ void onMouse(int button, int state, int x, int y) {
         mouseY = -y * 2.0 / viewportRect[3] + 1.0;
         if (polyline || lagrng || bezier || rom || hermite) {
             curves.at(curves.size() - 1)->addControlPoint(float2(mouseX, mouseY));
-            if (hermite) {
-                curves.at(curves.size() - 1)->printCP();
-            }
         } else if (adding) {
             if (selected >= 0) {
                 curves.at(selected)->addControlPoint(float2(mouseX, mouseY));
@@ -306,9 +290,6 @@ void onDisplay( ) {
         } else if (type == 'c') {
             glColor3d(1.0, 0.0, 1.0);
             glPointSize(10);
-        } else if (type == 'u') {
-            glColor3d(1.0, 0.5, 0.5);
-            glPointSize(10);
         }
 
         curves.at(i)->drawControlPoints();
@@ -316,6 +297,19 @@ void onDisplay( ) {
 
         //curves.at(i)->drawTracker(trackPosition);
     }
+    glColor3d(1.0, 1.0, 1.0);
+    if (curves.size() > 9) {
+        int ones = curves.size() % 10;
+        int tens = (curves.size() - ones) / 10;
+        curveCounter[0].setNumber(tens);
+        curveCounter[1].setNumber(ones);
+    } else {
+        curveCounter[0].setNumber(-1);
+        curveCounter[1].setNumber(curves.size());
+    }
+    curveCounter[0].draw();
+    curveCounter[1].draw();
+
     glutSwapBuffers();
 }
 
@@ -334,6 +328,9 @@ int main(int argc, char * argv[]) {
     glutMouseFunc(onMouse);
     glutDisplayFunc(onDisplay);
     glutMotionFunc(onMotion);
+
+    curveCounter[0].setTens();
+    
 
     // curves.push_back(new CatmullClarkCurve());
     // for (int i = 0; i < 4; i++) {

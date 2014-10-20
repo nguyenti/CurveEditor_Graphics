@@ -43,8 +43,51 @@ public:
                 }
                 glEnd();
             }
-        } else {
-
+            // to get around the fact that the beginning and end vertices don't have lines
+            // connecting to them
+            v[0] = controlPoints.at(0);
+            v[1] = v[0];
+            v[2] = controlPoints.at(1);
+            v[3] = controlPoints.at(2);
+            for (i = 0; i < 2; i++) {
+                glBegin(GL_LINE_STRIP);
+                    for(t = 0; t < 1; t += 0.0001) {
+                        p = catmull(t, v[0], v[1], v[2], v[3]);
+                        glVertex2f(p.x,p.y);
+                    }
+                glEnd();
+                v[0] = controlPoints.at(size - 3);
+                v[1] = controlPoints.at(size - 2);
+                v[2] = controlPoints.at(size - 1);
+                v[3] = v[2];
+            }
+        } else if (size > 1) {
+            // to deal with when size < 4 and you don't have enough vertices
+            v[0] = controlPoints.at(0);
+            if (size == 2) {
+                v[1] = controlPoints.at(1);
+                glBegin(GL_LINE_STRIP);
+                for(t = 0; t < 1; t += 0.0001) {
+                    p = catmull(t, v[0], v[0], v[1], v[1]);
+                    glVertex2f(p.x,p.y);
+                }
+                glEnd();
+            } else {
+                v[1] = controlPoints.at(1);
+                v[2] = controlPoints.at(2);
+                glBegin(GL_LINE_STRIP);
+                for(t = 0; t < 1; t += 0.0001) {
+                    p = catmull(t, v[0], v[0], v[1], v[2]);
+                    glVertex2f(p.x,p.y);
+                }
+                glEnd();
+                glBegin(GL_LINE_STRIP);
+                for(t = 0; t < 1; t += 0.0001) {
+                    p = catmull(t, v[0], v[1], v[2], v[2]);
+                    glVertex2f(p.x,p.y);
+                }
+                glEnd();
+            }
         }
         glFlush();
     }

@@ -71,7 +71,7 @@ class HermiteCurve: public Freeform {
      
     //     /* Hermite spline Calculation */
      
-        
+
 
     //     v.x = ((-t3 + 2*t2-t)*(p1.x) + (3*t3-5*t2+2)*(p2.x) 
     //         + (-3*t3+4*t2+t)* (p3.x) + (t3-t2)*(p4.x))/2;
@@ -109,7 +109,7 @@ public:
         int size = controlPoints.size();
         for (i = 0; i < size - 1; i++) {
             glBegin(GL_LINE_STRIP);
-            for(t = 0; t < 1; t += 0.0001) {
+            for(t = 0; t < 1; t += 0.001) {
                 p = hermite(t, controlPoints.at(i), tangents.at(i),
                     controlPoints.at(i+1), tangents.at(i+1));
                 glVertex2f(p.x,p.y);
